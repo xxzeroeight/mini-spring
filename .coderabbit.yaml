@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: ko-KR
+tone_instructions: |
+  순수 Java로 Spring 프레임워크를 재구현하는 개인 프로젝트(Spring 미사용). 심각/사소한 문제를 구분 표시하고 원인과 개선법을 구체적으로 제시. 리뷰는 교육적으로, 관련 개념도 함께 설명.
+reviews:
+  profile: chill
+  poem: false
+  path_instructions:
+    - path: '**/main/**/*.java'
+      instructions: |
+        1. Java 17 기준으로 리뷰.
+        2. 리플렉션 사용의 안전성, 멀티스레드 안전성, 리소스 누수를 중점 확인.
+        3. 객체지향 설계, 클린코드, 불필요한 로직을 확인.
+        4. 각 리뷰 포인트별로 문제점과 대안을 논리적으로 제시하고, 필요한 경우 예시 코드도 추가.
+        5. 리뷰는 해당 라인 범위의 코멘트에 작성.
+
+        프로젝트 버전 로드맵:
+        - v0.1.0 — DI 컨테이너 (@Component, @Service, @Repository, @Autowired, BeanFactory)
+        - v0.2.0 — MVC (@Controller, @GetMapping, @PostMapping, @RequestParam, @PathVariable, @RequestBody, DispatcherServlet)
+        - v0.3.0 — JSON + 파라미터 바인딩 (Jackson, @RequestBody 객체 바인딩)
+        - v0.4.0 — todo API + DB (JDBC, HikariCP, PostgreSQL)
+        - v1.0.0 — EC2 배포 + 벤치마크
+
+        메모리/스레드/리소스 누수처럼 마일스톤과 무관하게 즉시 위험한 문제는 평소대로 지적하세요.
+        현재 PR이 다루는 마일스톤 범위에 맞는지만 확인하세요.
+    - path: '**/test/**/*.java'
+      instructions: |
+        1. 테스트 네이밍이 명확한지 확인.
+        2. 테스트 코드도 클린코드 관점에서 리뷰.
+        3. 미작성한 테스트 케이스가 있다면 어떤 테스트가 필요한지 제안.
+  auto_review:
+    enabled: false
+    drafts: false
+    base_branches:
+      - 'main'
+  tools:
+    gitleaks:
+      enabled: true
+    pmd:
+      enabled: true
+chat:
+  auto_reply: true

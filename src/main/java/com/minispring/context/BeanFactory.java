@@ -17,7 +17,8 @@ import java.util.Set;
 public class BeanFactory {
     private final Set<Class<?>> componentClasses;
     private final Map<Class<?>, Object> singletons = new HashMap<>();
-    private final Set<Class<?>> currentlyCreating = new HashSet<>(); // 순환 참조 추적.
+    private final Object singletonLock = new Object();
+    private final ThreadLocal<Set<Class<?>>> currentlyCreating = ThreadLocal.withInitial(HashSet::new); // 순환 참조 추적.
 
     public BeanFactory(Set<Class<?>> componentClasses) {
         this.componentClasses = componentClasses;
@@ -33,11 +34,12 @@ public class BeanFactory {
     public Object getBean(Class<?> type) {
         Class<?> implClass= findImplementationClass(type);
 
-        if (singletons.containsKey(implClass)) {
-            return singletons.get(implClass);
+        synchronized (singletonLock) {
+            if (singletons.containsKey(implClass)) {
+                return singletons.get(implClass);
+            }
+            return createBean(implClass); // 없으면 생성.
         }
-
-        return createBean(implClass); // 없으면 생성.
     }
 
     // 인터페이스 -> 구현 클래스 찾기.
@@ -58,11 +60,13 @@ public class BeanFactory {
 
     // 빈 생성.
     private Object createBean(Class<?> implClass) {
-        if (currentlyCreating.contains(implClass)) {
+        Set<Class<?>> creationPath = currentlyCreating.get();
+
+        if (creationPath.contains(implClass)) {
             throw new CircularDependencyException("순환 참조: " + implClass.getName());
         }
 
-        currentlyCreating.add(implClass);
+        creationPath.add(implClass);
 
         try {
             Constructor<?> constructor = findInjectableConstructor(implClass); // 생성자 결정.
@@ -81,7 +85,9 @@ public class BeanFactory {
         } catch (ReflectiveOperationException e) {
             throw new BeanCreationException("빈 생성 실패: " +  implClass.getName(), e);
         } finally {
-            currentlyCreating.remove(implClass);
+            creationPath.remove(implClass);
+
+            if (creationPath.isEmpty()) currentlyCreating.remove();
         }
     }
 

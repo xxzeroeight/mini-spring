@@ -8,7 +8,7 @@ import java.util.Set;
 public class MiniSpring {
     private MiniSpring() {}
 
-    public static void run(Class<?> primarySource, int port) {
+    public static BeanFactory run(Class<?> primarySource, int port) {
         String basePackage = primarySource.getPackageName();
 
         ComponentScanner scanner = new ComponentScanner(basePackage);
@@ -16,5 +16,7 @@ public class MiniSpring {
 
         BeanFactory beanFactory = new BeanFactory(components);
         beanFactory.init();
+
+        return beanFactory; // Spring (ApplicationContext)
     }
 }

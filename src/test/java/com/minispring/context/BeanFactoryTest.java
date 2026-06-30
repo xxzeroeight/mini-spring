@@ -54,6 +54,16 @@ public class BeanFactoryTest {
 
             assertSame(first, second);
         }
+
+        @Test
+        void sharesSameSingletonInstanceAcrossInjectionAndDirectLookup() {
+            BeanFactory beanFactory = new BeanFactory(Set.of(SimpleComponent.class, DependentComponent.class));
+
+            SimpleComponent directLookup = (SimpleComponent) beanFactory.getBean(SimpleComponent.class);
+            DependentComponent dependent = (DependentComponent) beanFactory.getBean(DependentComponent.class);
+
+            assertSame(directLookup, dependent.getSimpleComponent());
+        }
     }
 
     @Nested
@@ -92,7 +102,7 @@ public class BeanFactoryTest {
 
         @Test
         void throwsWhenMultipleConstructorsAreAnnotatedWithAutowired() {
-            BeanFactory beanFactory = new BeanFactory(Set.of(SimpleComponent.class, MultiConstructorAmbiguous.class));
+            BeanFactory beanFactory = new BeanFactory(Set.of(MultiConstructorAmbiguous.class));
 
             assertThrows(NoSuchConstructorException.class,
                     () -> beanFactory.getBean(MultiConstructorAmbiguous.class));

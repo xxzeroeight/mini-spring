@@ -6,7 +6,10 @@ import com.minispring.context.exception.ComponentScanException;
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.net.JarURLConnection;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
@@ -48,10 +51,9 @@ public class ComponentScanner {
 
     // jar 탐색.
     private void scanFromJar(URL resource, Set<Class<?>> classes) throws IOException {
-        String jarPath = resource.getPath();
-        jarPath = jarPath.substring(5, jarPath.indexOf("!")); // file:/path/to/app.jar! -> /path/to/app.jar
+        JarURLConnection connection = (JarURLConnection) resource.openConnection();
 
-        try (JarFile jar = new JarFile(jarPath)) {
+        try (JarFile jar = connection.getJarFile()) { // JDK가 파싱해서 JarFile 반환.
             Enumeration<JarEntry> entries = jar.entries(); // jar 안의 모든 파일/패키지 순회.
             String pathPrefix = basePackage.replace(".", "/");
 
@@ -70,8 +72,12 @@ public class ComponentScanner {
 
     // 파일 탐색.
     private void scanFromFileSystem(URL resource, Set<Class<?>> classes) {
-        File directory = new File(resource.getFile());
-        scanDirectory(directory, basePackage, classes);
+        try {
+            File directory = Paths.get(resource.toURI()).toFile(); // JDK가 디코딩 해줌.
+            scanDirectory(directory, basePackage, classes);
+        } catch (URISyntaxException e) {
+            throw new ComponentScanException("리소스 URI 변환 실패: " + resource, e);
+        }
     }
 
     // 패키지 탐색.
@@ -92,11 +98,13 @@ public class ComponentScanner {
     // 실제로 클래스 로드하고 필터링.
     private void loadIfComponent(String className, Set<Class<?>> classes) {
         try {
-            Class<?> cls = Class.forName(className); // 메모리 로드.
+            Class<?> cls = Class.forName(className, false, Thread.currentThread().getContextClassLoader()); // 메모리 로드.
 
             if (isComponent(cls)) classes.add(cls); // Set 추가.
         } catch (ClassNotFoundException e) {
             throw new ComponentScanException("클래스 로드 실패: " + className, e);
+        } catch (LinkageError e) {
+            throw new ComponentScanException("클래스 로딩 중 링크 오류: " + className, e);
         }
     }
 
